@@ -99,10 +99,10 @@ export default function Home() {
                 fontSize: "0.9rem",
               }}
             >
-              C
+              U
             </div>
             <span style={{ fontWeight: 550, fontSize: "0.95rem", letterSpacing: "-0.02em" }}>
-              ColdForge AI
+              Uncold
             </span>
             <span className="rf-badge" style={{ marginLeft: "0.25rem", fontSize: "0.7rem", padding: "0.15rem 0.5rem" }}>
               v1.0 Preview
@@ -158,7 +158,7 @@ export default function Home() {
         >
           <div className="rf-badge rf-badge-accent" style={{ padding: "0.35rem 0.85rem", fontSize: "0.8rem", gap: "0.5rem" }}>
             <span style={{ display: "inline-block", width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#30d158" }} />
-            <span>Introducing ColdForge AI • Direct Gmail Outreach</span>
+            <span>Introducing Uncold • Direct Gmail Outreach</span>
           </div>
         </motion.div>
 
@@ -194,7 +194,7 @@ export default function Home() {
             lineHeight: 1.6,
           }}
         >
-          ColdForge AI extracts your real achievements from your resume or custom profile, links directly to your personal Gmail via OAuth, and delivers hyper-personalized cold outreach with 1-click execution.
+          Uncold extracts your real achievements from your resume or custom profile, links directly to your personal Gmail via OAuth, and delivers hyper-personalized cold outreach with 1-click execution.
         </motion.p>
 
         {/* Waitlist / Early Access Form (Commented Out) */}
@@ -425,7 +425,7 @@ export default function Home() {
                         <span className="rf-badge">PDF Supported</span>
                       </div>
                       <p style={{ fontSize: "0.825rem", color: "#8e8e93" }}>
-                        Upload your existing PDF resume. ColdForge extracts core skills, tech stacks, and quantifiable career wins into your structured candidate profile.
+                        Upload your existing PDF resume. Uncold extracts core skills, tech stacks, and quantifiable career wins into your structured candidate profile.
                       </p>
 
                       <div
@@ -1076,7 +1076,7 @@ export default function Home() {
             </div>
             <h3 style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>Gemini Intelligence Engine</h3>
             <p style={{ fontSize: "0.875rem", color: "#8e8e93" }}>
-              Pasting a JD triggers deep semantic analysis. ColdForge finds the exact intersections between the company&apos;s challenges and your proven skill set.
+              Pasting a JD triggers deep semantic analysis. Uncold finds the exact intersections between the company&apos;s challenges and your proven skill set.
             </p>
             <div style={{ marginTop: "1.25rem", display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
               <span className="rf-badge">Gemini 1.5 Flash</span>
@@ -1160,7 +1160,7 @@ export default function Home() {
             </div>
             <h3 style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>Automated Reply Tracker</h3>
             <p style={{ fontSize: "0.875rem", color: "#8e8e93" }}>
-              Follow every sent outreach from dispatch to interview invitation. ColdForge monitors response threads in your Gmail so no opportunity slips away.
+              Follow every sent outreach from dispatch to interview invitation. Uncold monitors response threads in your Gmail so no opportunity slips away.
             </p>
             <div style={{ marginTop: "1.25rem", display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
               <span className="rf-badge">Auto Thread Detection</span>
@@ -1273,7 +1273,7 @@ export default function Home() {
               Your email credentials never touch our servers.
             </h2>
             <p style={{ fontSize: "0.9rem", color: "#8e8e93", marginTop: "0.75rem" }}>
-              ColdForge uses Google OAuth tokenized authentication with restricted compose scopes. We never read your private inbox messages or store email passwords.
+              Uncold uses Google OAuth tokenized authentication with restricted compose scopes. We never read your private inbox messages or store email passwords.
             </p>
           </div>
 
@@ -1317,23 +1317,23 @@ export default function Home() {
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           {[
             {
-              q: "How does ColdForge AI connect to my Gmail?",
+              q: "How does Uncold connect to my Gmail?",
               a: "We integrate directly using Google OAuth with the send mail scope. This lets you dispatch tailored emails from your genuine address without needing to copy and paste or launch external mail clients.",
             },
             {
               q: "Can I build my profile manually without a resume?",
-              a: "Yes! While you can upload a PDF resume for automated parsing, ColdForge includes a full manual builder where you can list specific GitHub repositories, technical achievements, metrics, and dream roles.",
+              a: "Yes! While you can upload a PDF resume for automated parsing, Uncold includes a full manual builder where you can list specific GitHub repositories, technical achievements, metrics, and dream roles.",
             },
             {
-              q: "Why do cold emails sent through ColdForge have higher reply rates?",
+              q: "Why do cold emails sent through Uncold have higher reply rates?",
               a: "Because they originate from your authenticated personal Gmail account rather than marketing relays (like Mailgun or SendGrid), they bypass spam filters and land in the Primary inbox. Furthermore, Gemini tailors each pitch specifically to the JD’s pain points.",
             },
             {
               q: "Can I edit the generated email before sending?",
-              a: "Always. Every email generated by ColdForge can be reviewed, edited, or adjusted in tone before you click Send.",
+              a: "Always. Every email generated by Uncold can be reviewed, edited, or adjusted in tone before you click Send.",
             },
             {
-              q: "When is ColdForge AI launching?",
+              q: "When is Uncold launching?",
               a: "We are currently onboarding early adopters in batches. Enter your email on this page to secure your spot on the priority access list.",
             },
           ].map((faq, i) => (
@@ -1461,7 +1461,7 @@ export default function Home() {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <span style={{ color: "#ffffff", fontWeight: 550 }}>ColdForge AI</span>
+            <span style={{ color: "#ffffff", fontWeight: 550 }}>Uncold</span>
             <span>• © {new Date().getFullYear()} All rights reserved.</span>
           </div>
 

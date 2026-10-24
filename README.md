@@ -1,8 +1,8 @@
-# ColdForge AI – Frontend Landing Page 🔥
+# Uncold – Frontend Landing Page 🔥
 
-> Precision cold outreach engine powered by Next.js and Google Gemini API.
+> Precision outreach engine powered by Next.js and Google Gemini API.
 
-This repository contains the standalone Next.js frontend and landing page for **ColdForge AI**, built with Next.js App Router, TypeScript, Vanilla CSS glassmorphism, and Framer Motion.
+This repository contains the standalone Next.js frontend and landing page for **Uncold**, built with Next.js App Router, TypeScript, Vanilla CSS glassmorphism, and Framer Motion.
 
 ---
 

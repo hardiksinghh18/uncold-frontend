@@ -8,10 +8,11 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ColdForge AI – Direct Gmail Outreach for Job Seekers",
+  title: "Uncold – Direct Gmail Outreach for Job Seekers",
   description:
-    "Build your profile using your resume or manual portfolio, link your personal Gmail, and send hyper-tailored cold outreach directly to hiring managers with 1-click delivery.",
+    "Build your profile using your resume or manual portfolio, link your personal Gmail, and send hyper-tailored outreach directly to hiring managers with 1-click delivery.",
   keywords: [
+    "uncold",
     "cold email",
     "job search",
     "cold outreach",
@@ -22,9 +23,9 @@ export const metadata: Metadata = {
     "career",
   ],
   openGraph: {
-    title: "ColdForge AI – Direct Gmail Outreach for Job Seekers",
+    title: "Uncold – Direct Gmail Outreach for Job Seekers",
     description:
-      "Build your profile using your resume or manual portfolio, link your personal Gmail, and send hyper-tailored cold outreach directly to hiring managers with 1-click delivery.",
+      "Build your profile using your resume or manual portfolio, link your personal Gmail, and send hyper-tailored outreach directly to hiring managers with 1-click delivery.",
     type: "website",
   },
 };
