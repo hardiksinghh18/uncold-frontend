@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
@@ -15,8 +17,13 @@ import {
   TrendingUp,
   Cpu,
   Sliders,
-  CheckCheck
+  CheckCheck,
+  LogOut,
+  LogIn,
+  ArrowRight
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { AuthModal } from "@/components/AuthModal";
 
 function LinkedInIcon({ size = 18 }: { size?: number }) {
   return (
@@ -38,6 +45,10 @@ function LinkedInIcon({ size = 18 }: { size?: number }) {
 }
 
 export default function Home() {
+  const router = useRouter();
+  const { user, signOut, isLoading } = useAuth();
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<"signin" | "signup">("signin");
   const [activeTab, setActiveTab] = useState<"profile" | "gmail" | "forge" | "tracker">("profile");
   const [isCopied, setIsCopied] = useState(false);
   const [dummyChannel, setDummyChannel] = useState<"email" | "linkedin">("email");
@@ -84,30 +95,40 @@ export default function Home() {
           }}
         >
           {/* Logo & Brand */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <div
+          <Link
+            href={user ? "/dashboard" : "/"}
+            onClick={(e) => {
+              if (user) {
+                e.preventDefault();
+                router.push("/dashboard");
+              }
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              textDecoration: "none",
+              color: "#ffffff",
+              cursor: "pointer",
+            }}
+          >
+            <img
+              src="/uncold_logo.webp"
+              alt="Uncold"
               style={{
                 width: "28px",
                 height: "28px",
                 borderRadius: "8px",
-                backgroundColor: "#ffffff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#000000",
-                fontWeight: 700,
-                fontSize: "0.9rem",
+                objectFit: "cover",
               }}
-            >
-              U
-            </div>
+            />
             <span style={{ fontWeight: 550, fontSize: "0.95rem", letterSpacing: "-0.02em" }}>
               Uncold
             </span>
             <span className="rf-badge" style={{ marginLeft: "0.25rem", fontSize: "0.7rem", padding: "0.15rem 0.5rem" }}>
               v1.0 Preview
             </span>
-          </div>
+          </Link>
 
           {/* Navigation Anchors */}
           <nav style={{ display: "none", alignItems: "center", gap: "1.75rem" }} className="desktop-nav">
@@ -125,12 +146,123 @@ export default function Home() {
             </a>
           </nav>
 
-          {/* Header Action */}
+          {/* Header Action / Auth */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <div className="rf-badge rf-badge-accent" style={{ padding: "0.35rem 0.75rem", fontSize: "0.75rem", gap: "0.4rem" }}>
-              <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#30d158", display: "inline-block" }} />
-              <span>Coming Soon</span>
-            </div>
+            {isLoading ? (
+              <div style={{ width: "80px", height: "32px", borderRadius: "8px", backgroundColor: "rgba(255, 255, 255, 0.05)" }} />
+            ) : user ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <Link
+                  href="/dashboard"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    padding: "0.35rem 0.75rem",
+                    borderRadius: "8px",
+                    backgroundColor: "#ffffff",
+                    color: "#000000",
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    textDecoration: "none",
+                  }}
+                >
+                  Dashboard
+                </Link>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    padding: "0.35rem 0.75rem",
+                    borderRadius: "8px",
+                    backgroundColor: "rgba(255, 255, 255, 0.06)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    fontSize: "0.8rem",
+                    color: "#ffffff",
+                  }}
+                >
+                  <User size={14} color="#30d158" />
+                  <span style={{ maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {user.email}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => signOut()}
+                  title="Sign out"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "0.45rem",
+                    borderRadius: "8px",
+                    backgroundColor: "transparent",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    color: "#8e8e93",
+                    cursor: "pointer",
+                    transition: "color 0.2s, border-color 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = "#ff453a";
+                    e.currentTarget.style.borderColor = "rgba(255, 69, 58, 0.3)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = "#8e8e93";
+                    e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.1)";
+                  }}
+                >
+                  <LogOut size={14} />
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <Link
+                  href="/sign-in"
+                  style={{
+                    padding: "0.4rem 0.85rem",
+                    borderRadius: "8px",
+                    backgroundColor: "transparent",
+                    border: "1px solid rgba(255, 255, 255, 0.12)",
+                    color: "#ffffff",
+                    fontSize: "0.825rem",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "background 0.2s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.08)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/sign-up"
+                  style={{
+                    padding: "0.4rem 0.85rem",
+                    borderRadius: "8px",
+                    backgroundColor: "#ffffff",
+                    border: "none",
+                    color: "#000000",
+                    fontSize: "0.825rem",
+                    fontWeight: 550,
+                    cursor: "pointer",
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "opacity 0.2s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+                  onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                >
+                  Sign Up
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -246,24 +378,49 @@ export default function Home() {
           </p>
           */}
 
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.6rem",
-              padding: "0.65rem 1.5rem",
-              borderRadius: "14px",
-              backgroundColor: "rgba(255, 255, 255, 0.06)",
-              border: "1px solid rgba(255, 255, 255, 0.15)",
-              color: "#ffffff",
-              fontSize: "0.95rem",
-              fontWeight: 520,
-              boxShadow: "0 0 20px rgba(255, 255, 255, 0.05)",
-            }}
-          >
-            <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#30d158", boxShadow: "0 0 8px #30d158" }} />
-            <span>Coming Soon</span>
-          </div>
+          {user ? (
+            <Link
+              href="/dashboard"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.6rem",
+                padding: "0.75rem 1.75rem",
+                borderRadius: "14px",
+                backgroundColor: "#ffffff",
+                color: "#000000",
+                fontSize: "0.95rem",
+                fontWeight: 600,
+                textDecoration: "none",
+                boxShadow: "0 4px 20px rgba(255, 255, 255, 0.15)",
+                transition: "transform 0.15s, opacity 0.15s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.92")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+            >
+              <span>Go to Your Workspace</span>
+              <ArrowRight size={16} />
+            </Link>
+          ) : (
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.6rem",
+                padding: "0.65rem 1.5rem",
+                borderRadius: "14px",
+                backgroundColor: "rgba(255, 255, 255, 0.06)",
+                border: "1px solid rgba(255, 255, 255, 0.15)",
+                color: "#ffffff",
+                fontSize: "0.95rem",
+                fontWeight: 520,
+                boxShadow: "0 0 20px rgba(255, 255, 255, 0.05)",
+              }}
+            >
+              <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#30d158", boxShadow: "0 0 8px #30d158" }} />
+              <span>Coming Soon</span>
+            </div>
+          )}
 
           <p style={{ fontSize: "0.775rem", color: "#71717a" }}>
             Direct Gmail cold outreach engine is currently in development.
@@ -1074,12 +1231,12 @@ export default function Home() {
             >
               <Cpu size={18} />
             </div>
-            <h3 style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>Gemini Intelligence Engine</h3>
+            <h3 style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>Smart AI Writing Engine</h3>
             <p style={{ fontSize: "0.875rem", color: "#8e8e93" }}>
-              Pasting a JD triggers deep semantic analysis. Uncold finds the exact intersections between the company&apos;s challenges and your proven skill set.
+              Pasting a job description triggers deep analysis. Uncold finds the exact match between the company&apos;s needs and your proven skill set.
             </p>
             <div style={{ marginTop: "1.25rem", display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-              <span className="rf-badge">Gemini 1.5 Flash</span>
+              <span className="rf-badge">Smart AI</span>
               <span className="rf-badge">Context Mapping</span>
               <span className="rf-badge">Anti-Generic</span>
             </div>
@@ -1326,7 +1483,7 @@ export default function Home() {
             },
             {
               q: "Why do cold emails sent through Uncold have higher reply rates?",
-              a: "Because they originate from your authenticated personal Gmail account rather than marketing relays (like Mailgun or SendGrid), they bypass spam filters and land in the Primary inbox. Furthermore, Gemini tailors each pitch specifically to the JD’s pain points.",
+              a: "Because they are sent from your real personal Gmail account rather than bulk marketing tools, they avoid spam folders and land in the Primary inbox. Plus, our AI tailors every message to the specific job description.",
             },
             {
               q: "Can I edit the generated email before sending?",
@@ -1466,11 +1623,18 @@ export default function Home() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
-            <span style={{ color: "#71717a" }}>Built with Next.js & Gemini API</span>
+            <span style={{ color: "#71717a" }}>Built with Next.js & AI</span>
             <span style={{ color: "#8e8e93" }}>Coming Soon</span>
           </div>
         </div>
       </footer>
+
+      {/* Authentication Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        defaultMode={authModalMode}
+      />
     </div>
   );
 }
