@@ -1,5 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import type { User } from "@supabase/supabase-js";
 
 export async function createClient() {
   const cookieStore = await cookies();
@@ -25,4 +27,30 @@ export async function createClient() {
       },
     }
   );
+}
+
+/**
+ * Reads the authenticated user for protected Server Component pages.
+ * Middleware already validates via supabase.auth.getUser(), so reading the
+ * session cookie first avoids a duplicate network roundtrip on every tab switch.
+ */
+export async function requirePageUser(redirectPath: string): Promise<User> {
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (session?.user) {
+    return session.user;
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect(`/sign-in?redirect=${encodeURIComponent(redirectPath)}`);
+  }
+
+  return user;
 }

@@ -1,5 +1,4 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requirePageUser } from "@/lib/supabase/server";
 import { MailboxClient } from "./MailboxClient";
 
 export const metadata = {
@@ -8,14 +7,6 @@ export const metadata = {
 };
 
 export default async function MailboxPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/sign-in?redirect=/mailbox");
-  }
-
+  const user = await requirePageUser("/mailbox");
   return <MailboxClient user={user} />;
 }

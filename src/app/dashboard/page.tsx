@@ -1,6 +1,5 @@
 import { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requirePageUser } from "@/lib/supabase/server";
 import { DashboardClient } from "./DashboardClient";
 
 export const metadata: Metadata = {
@@ -9,15 +8,6 @@ export const metadata: Metadata = {
 };
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Server-side authentication check
-  if (!user) {
-    redirect("/sign-in?redirect=/dashboard");
-  }
-
+  const user = await requirePageUser("/dashboard");
   return <DashboardClient user={user} />;
 }

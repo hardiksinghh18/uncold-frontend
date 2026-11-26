@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { User as SupabaseUser } from "@supabase/supabase-js";
@@ -16,6 +16,13 @@ interface AppHeaderProps {
 
 export function AppHeader({ user }: AppHeaderProps) {
   const pathname = usePathname();
+  const [pendingPath, setPendingPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPendingPath(null);
+  }, [pathname]);
+
+  const activePath = pendingPath ?? pathname;
 
   const userMetadata = user.user_metadata || {};
   const fullName = userMetadata.full_name || userMetadata.name || user.email?.split("@")[0] || "User";
@@ -26,19 +33,19 @@ export function AppHeader({ user }: AppHeaderProps) {
       name: "Dashboard",
       href: "/dashboard",
       icon: LayoutDashboard,
-      active: pathname === "/dashboard",
+      active: activePath === "/dashboard",
     },
     {
       name: "Mailbox Engine",
       href: "/mailbox",
       icon: Mail,
-      active: pathname === "/mailbox",
+      active: activePath === "/mailbox",
     },
     {
       name: "Outreach History",
       href: "/history",
       icon: Clock,
-      active: pathname === "/history",
+      active: activePath === "/history",
     },
   ];
 
@@ -54,10 +61,7 @@ export function AppHeader({ user }: AppHeaderProps) {
               className="w-7 h-7 rounded-lg object-cover shadow-sm group-hover:scale-105 transition-transform"
             />
             <span className="font-semibold text-sm tracking-tight text-white">
-              Uncold
-            </span>
-            <span className="text-[10px] font-mono tracking-tight px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/10 text-zinc-400">
-              PROD
+              UnCold
             </span>
           </Link>
 
@@ -71,6 +75,10 @@ export function AppHeader({ user }: AppHeaderProps) {
                 <Link
                   key={tab.name}
                   href={tab.href}
+                  prefetch={true}
+                  onClick={() => {
+                    if (tab.href !== pathname) setPendingPath(tab.href);
+                  }}
                   className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                     tab.active
                       ? "bg-white/[0.1] text-white font-semibold border border-white/15 shadow-sm"
@@ -102,6 +110,10 @@ export function AppHeader({ user }: AppHeaderProps) {
                 <Link
                   key={tab.name}
                   href={tab.href}
+                  prefetch={true}
+                  onClick={() => {
+                    if (tab.href !== pathname) setPendingPath(tab.href);
+                  }}
                   title={tab.name}
                   className={`p-1.5 rounded-lg text-xs transition-colors ${
                     tab.active
@@ -120,9 +132,13 @@ export function AppHeader({ user }: AppHeaderProps) {
           {/* Clickable Profile Badge */}
           <Link
             href="/profile"
+            prefetch={true}
+            onClick={() => {
+              if (pathname !== "/profile") setPendingPath("/profile");
+            }}
             title="View & Edit Candidate Profile"
             className={`flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-xl transition-all group cursor-pointer border ${
-              pathname === "/profile"
+              activePath === "/profile"
                 ? "bg-white/[0.08] border-white/20 text-white"
                 : "border-transparent hover:border-white/10 hover:bg-white/[0.05]"
             }`}
