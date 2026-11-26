@@ -402,28 +402,30 @@ export default function Home() {
               <ArrowRight size={16} />
             </Link>
           ) : (
-            <div
+            <Link
+              href="/sign-up"
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "0.6rem",
-                padding: "0.65rem 1.5rem",
-                borderRadius: "14px",
-                backgroundColor: "rgba(255, 255, 255, 0.06)",
-                border: "1px solid rgba(255, 255, 255, 0.15)",
-                color: "#ffffff",
+                padding: "0.75rem 1.75rem",
+                borderRadius: "12px",
+                backgroundColor: "#ffffff",
+                color: "#000000",
                 fontSize: "0.95rem",
-                fontWeight: 520,
-                boxShadow: "0 0 20px rgba(255, 255, 255, 0.05)",
+                fontWeight: 600,
+                textDecoration: "none",
+                boxShadow: "0 0 25px rgba(255, 255, 255, 0.25)",
+                transition: "transform 0.2s",
               }}
             >
-              <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#30d158", boxShadow: "0 0 8px #30d158" }} />
-              <span>Coming Soon</span>
-            </div>
+              <span>Get Started</span>
+              <ArrowRight size={16} />
+            </Link>
           )}
 
           <p style={{ fontSize: "0.775rem", color: "#71717a" }}>
-            Direct Gmail cold outreach engine is currently in development.
+            Connect your Gmail and send tailored cold outreach in seconds.
           </p>
         </motion.div>
 
@@ -1572,25 +1574,27 @@ export default function Home() {
             )}
             */}
 
-            <div
+            <Link
+              href={user ? "/dashboard" : "/sign-up"}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "0.6rem",
-                padding: "0.65rem 1.5rem",
-                borderRadius: "14px",
-                backgroundColor: "rgba(255, 255, 255, 0.06)",
-                border: "1px solid rgba(255, 255, 255, 0.15)",
-                color: "#ffffff",
+                padding: "0.75rem 1.75rem",
+                borderRadius: "12px",
+                backgroundColor: "#ffffff",
+                color: "#000000",
                 fontSize: "0.95rem",
-                fontWeight: 520,
+                fontWeight: 600,
+                textDecoration: "none",
+                boxShadow: "0 0 25px rgba(255, 255, 255, 0.25)",
               }}
             >
-              <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#30d158", boxShadow: "0 0 8px #30d158" }} />
-              <span>Coming Soon</span>
-            </div>
+              <span>{user ? "Go to Workspace" : "Get Started"}</span>
+              <ArrowRight size={16} />
+            </Link>
             <p style={{ fontSize: "0.8rem", color: "#71717a" }}>
-              Public launch updates will be posted here.
+              Start sending personalized cold emails directly from your Gmail.
             </p>
           </div>
         </div>
@@ -1624,7 +1628,12 @@ export default function Home() {
 
           <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
             <span style={{ color: "#71717a" }}>Built with Next.js & AI</span>
-            <span style={{ color: "#8e8e93" }}>Coming Soon</span>
+            <Link
+              href={user ? "/dashboard" : "/sign-up"}
+              style={{ color: "#ffffff", textDecoration: "none", fontWeight: 500 }}
+            >
+              Get Started
+            </Link>
           </div>
         </div>
       </footer>
