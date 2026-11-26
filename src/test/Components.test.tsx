@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { User } from "@supabase/supabase-js";
 import { AppHeader } from "@/components/AppHeader";
+import { ReduxProvider } from "@/redux/ReduxProvider";
 import { DashboardClient } from "@/app/dashboard/DashboardClient";
 import { HistoryClient } from "@/app/history/HistoryClient";
 import { MailboxClient } from "@/app/mailbox/MailboxClient";
@@ -10,6 +11,12 @@ import { ProfileClient } from "@/app/profile/ProfileClient";
 
 const mockSignOut = vi.fn();
 const mockPush = vi.fn();
+
+const jsonResponse = (data: unknown, status = 200) =>
+  new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",
@@ -72,24 +79,22 @@ describe("DashboardClient Component", () => {
   });
 
   it("shows only 5 recent emails, View Full History CTA, and Connect Gmail nudge when disconnected", async () => {
-    global.fetch = vi.fn((url: RequestInfo | URL) => {
-      const u = String(url);
+    global.fetch = vi.fn((input: RequestInfo | URL) => {
+      const u = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
       if (u.includes("/api/gmail/status")) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ connected: false, connectedGmail: null }),
-        } as Response);
+        return Promise.resolve(jsonResponse({ connected: false, connectedGmail: null }));
       }
       if (u.includes("/api/emails/stats")) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ emails: sampleEmails }),
-        } as Response);
+        return Promise.resolve(jsonResponse({ emails: sampleEmails }));
       }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response);
+      return Promise.resolve(jsonResponse({}));
     }) as typeof fetch;
 
-    render(<DashboardClient user={mockUser} />);
+    render(
+      <ReduxProvider>
+        <DashboardClient user={mockUser} />
+      </ReduxProvider>
+    );
 
     await waitFor(() => {
       expect(screen.getByText("Showing 5 of 7")).toBeInTheDocument();
@@ -105,18 +110,19 @@ describe("DashboardClient Component", () => {
 
 describe("HistoryClient Component", () => {
   it("supports search filtering and switching to By Company / By Recruiter grouping", async () => {
-    global.fetch = vi.fn((url: RequestInfo | URL) => {
-      const u = String(url);
+    global.fetch = vi.fn((input: RequestInfo | URL) => {
+      const u = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
       if (u.includes("/api/emails/stats")) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ emails: sampleEmails }),
-        } as Response);
+        return Promise.resolve(jsonResponse({ emails: sampleEmails }));
       }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response);
+      return Promise.resolve(jsonResponse({}));
     }) as typeof fetch;
 
-    render(<HistoryClient user={mockUser} />);
+    render(
+      <ReduxProvider>
+        <HistoryClient user={mockUser} />
+      </ReduxProvider>
+    );
 
     await waitFor(() => {
       expect(screen.getByText("Subject 1")).toBeInTheDocument();
@@ -142,24 +148,22 @@ describe("HistoryClient Component", () => {
 
 describe("MailboxClient Component", () => {
   it("disables Send Cold Outreach when Gmail is not connected and hides email fields in DM mode", async () => {
-    global.fetch = vi.fn((url: RequestInfo | URL) => {
-      const u = String(url);
+    global.fetch = vi.fn((input: RequestInfo | URL) => {
+      const u = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
       if (u.includes("/api/gmail/status")) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ connected: false, connectedGmail: null }),
-        } as Response);
+        return Promise.resolve(jsonResponse({ connected: false, connectedGmail: null }));
       }
       if (u.includes("/api/profile")) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ profile: null }),
-        } as Response);
+        return Promise.resolve(jsonResponse({ profile: null }));
       }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response);
+      return Promise.resolve(jsonResponse({}));
     }) as typeof fetch;
 
-    render(<MailboxClient user={mockUser} />);
+    render(
+      <ReduxProvider>
+        <MailboxClient user={mockUser} />
+      </ReduxProvider>
+    );
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /Connect Gmail to Send/i })).toBeDisabled();
@@ -174,28 +178,30 @@ describe("MailboxClient Component", () => {
 
 describe("ProfileClient Component", () => {
   it("displays location, resume link, and Sign Out button on the profile page", async () => {
-    global.fetch = vi.fn((url: RequestInfo | URL) => {
-      const u = String(url);
+    global.fetch = vi.fn((input: RequestInfo | URL) => {
+      const u = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
       if (u.includes("/api/profile")) {
-        return Promise.resolve({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              profile: {
-                full_name: "Hardik Singh",
-                email: "hardik@gmail.com",
-                location: "Delhi, India",
-                headline: "Full Stack Engineer",
-                skills: ["React", "TypeScript"],
-                portfolio_links: { resume_url: "https://drive.google.com/file/d/123/view" },
-              },
-            }),
-        } as Response);
+        return Promise.resolve(
+          jsonResponse({
+            profile: {
+              full_name: "Hardik Singh",
+              email: "hardik@gmail.com",
+              location: "Delhi, India",
+              headline: "Full Stack Engineer",
+              skills: ["React", "TypeScript"],
+              portfolio_links: { resume_url: "https://drive.google.com/file/d/123/view" },
+            },
+          })
+        );
       }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response);
+      return Promise.resolve(jsonResponse({}));
     }) as typeof fetch;
 
-    render(<ProfileClient user={mockUser} />);
+    render(
+      <ReduxProvider>
+        <ProfileClient user={mockUser} />
+      </ReduxProvider>
+    );
 
     await waitFor(() => {
       expect(screen.getByText("Delhi, India")).toBeInTheDocument();

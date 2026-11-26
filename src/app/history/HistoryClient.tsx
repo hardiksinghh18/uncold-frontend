@@ -5,8 +5,12 @@ import Link from "next/link";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import { useAuth } from "@/context/AuthContext";
 import { AppHeader } from "@/components/AppHeader";
+import { CustomSelect } from "@/components/CustomSelect";
 import { JobMetadata, JobMetadataPanel } from "@/components/JobMetadataPanel";
-import { authFetch } from "@/lib/api";
+import {
+  useGetEmailStatsQuery,
+  useSyncEmailRepliesMutation,
+} from "@/redux/api/uncoldApi";
 import {
   Mail,
   ArrowLeft,
@@ -59,11 +63,7 @@ interface TrackedEmail {
 
 export function HistoryClient({ user }: HistoryClientProps) {
   const { signOut } = useAuth();
-  const [emails, setEmails] = useState<TrackedEmail[]>([]);
-  const [isLoadingEmails, setIsLoadingEmails] = useState(true);
-  const [hasLoadedInitial, setHasLoadedInitial] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState<TrackedEmail | null>(null);
-  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
 
   // Search, Filter & Grouping State
   const [searchQuery, setSearchQuery] = useState("");
@@ -78,46 +78,41 @@ export function HistoryClient({ user }: HistoryClientProps) {
   const userMetadata = user.user_metadata || {};
   const fullName = userMetadata.full_name || userMetadata.name || user.email?.split("@")[0] || "User";
   const avatarUrl = userMetadata.avatar_url || userMetadata.picture || null;
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 
-  // Fetch real-time email telemetry and sync replies
-  const fetchEmails = useCallback(async (isSilent = false) => {
-    try {
-      if (!isSilent) setIsLoadingEmails(true);
+  const {
+    data: emailStatsData,
+    isLoading: isLoadingEmails,
+    fulfilledTimeStamp,
+    refetch: refetchEmailStats,
+  } = useGetEmailStatsQuery(user.email || undefined, {
+    pollingInterval: 15000,
+  });
+  const [syncEmailReplies] = useSyncEmailRepliesMutation();
 
-      // Trigger automatic reply check in background
-      if (user.email) {
-        authFetch(`${backendUrl}/api/emails/sync-replies`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: user.email }),
-        }).catch(() => {});
-      }
+  const emails = (emailStatsData?.emails ?? []) as TrackedEmail[];
+  const hasLoadedInitial = !isLoadingEmails;
+  const lastRefreshed = fulfilledTimeStamp ? new Date(fulfilledTimeStamp) : null;
 
-      const url = user.email
-        ? `${backendUrl}/api/emails/stats?email=${encodeURIComponent(user.email)}`
-        : `${backendUrl}/api/emails/stats`;
-      const res = await authFetch(url);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.emails) {
-          setEmails(data.emails);
-          setLastRefreshed(new Date());
+  // Fetch real-time email stats and sync replies via RTK Query
+  const fetchEmails = useCallback(
+    async (_isSilent = false) => {
+      try {
+        if (user.email) {
+          syncEmailReplies({ email: user.email }).catch(() => {});
         }
+        await refetchEmailStats();
+      } catch (e) {
+        console.warn("Could not fetch email stats:", e);
       }
-    } catch (e) {
-      console.warn("Could not fetch email stats:", e);
-    } finally {
-      setIsLoadingEmails(false);
-      setHasLoadedInitial(true);
-    }
-  }, [backendUrl, user.email]);
+    },
+    [refetchEmailStats, syncEmailReplies, user.email]
+  );
 
   useEffect(() => {
-    fetchEmails(false);
-    const interval = setInterval(() => fetchEmails(true), 12000);
-    return () => clearInterval(interval);
-  }, [fetchEmails]);
+    if (user.email) {
+      syncEmailReplies({ email: user.email }).catch(() => {});
+    }
+  }, [syncEmailReplies, user.email]);
 
   // Telemetry computations
   const totalSent = emails.length;
@@ -365,26 +360,31 @@ export function HistoryClient({ user }: HistoryClientProps) {
               </div>
 
               {/* Channel Filter */}
-              <select
+              <CustomSelect
+                ariaLabel="Filter by channel"
+                icon={<Filter size={12} />}
                 value={channelFilter}
-                onChange={(e) => setChannelFilter(e.target.value as "all" | "email" | "dm" | "wellfound")}
-                className="bg-white/[0.04] border border-white/10 text-zinc-300 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-white/20 cursor-pointer"
-              >
-                <option value="all" className="bg-[#0c0d12]">All Channels</option>
-                <option value="email" className="bg-[#0c0d12]">Cold Email</option>
-                <option value="dm" className="bg-[#0c0d12]">LinkedIn / Twitter DM</option>
-                <option value="wellfound" className="bg-[#0c0d12]">Wellfound Note</option>
-              </select>
+                onChange={(val) => setChannelFilter(val as "all" | "email" | "dm" | "wellfound")}
+                options={[
+                  { value: "all", label: "All Channels", description: "Email, DM & Wellfound" },
+                  { value: "email", label: "Cold Email", description: "Sent via Gmail" },
+                  { value: "dm", label: "LinkedIn / Twitter DM", description: "Copied DMs" },
+                  { value: "wellfound", label: "Wellfound Note", description: "Startup notes" },
+                ]}
+              />
 
               {/* Sort Toggle */}
-              <select
+              <CustomSelect
+                ariaLabel="Sort outreach history"
+                icon={<Clock size={12} />}
+                align="right"
                 value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value as "newest" | "oldest")}
-                className="bg-white/[0.04] border border-white/10 text-zinc-300 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-white/20 cursor-pointer"
-              >
-                <option value="newest" className="bg-[#0c0d12]">Sort: Newest First</option>
-                <option value="oldest" className="bg-[#0c0d12]">Sort: Oldest First</option>
-              </select>
+                onChange={(val) => setSortOrder(val as "newest" | "oldest")}
+                options={[
+                  { value: "newest", label: "Sort: Newest First" },
+                  { value: "oldest", label: "Sort: Oldest First" },
+                ]}
+              />
             </div>
           </div>
 

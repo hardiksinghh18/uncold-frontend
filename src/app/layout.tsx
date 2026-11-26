@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import { ReduxProvider } from "@/redux/ReduxProvider";
 import { Toaster } from "sonner";
 
 const inter = Inter({
@@ -45,9 +46,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <AuthProvider>
-          {children}
-          <Toaster
+        <ReduxProvider>
+          <AuthProvider>
+            {children}
+            <Toaster
             theme="dark"
             position="bottom-left"
             richColors
@@ -63,7 +65,8 @@ export default function RootLayout({
               },
             }}
           />
-        </AuthProvider>
+          </AuthProvider>
+        </ReduxProvider>
       </body>
     </html>
   );

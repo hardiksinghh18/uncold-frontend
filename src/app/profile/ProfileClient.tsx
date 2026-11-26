@@ -5,7 +5,11 @@ import Link from "next/link";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import { useAuth } from "@/context/AuthContext";
 import { AppHeader } from "@/components/AppHeader";
-import { authFetch } from "@/lib/api";
+import {
+  useGetProfileQuery,
+  useParseResumeMutation,
+  useSaveProfileMutation,
+} from "@/redux/api/uncoldApi";
 import { toast } from "sonner";
 import {
   User,
@@ -127,81 +131,67 @@ export function ProfileClient({ user }: ProfileClientProps) {
 
   const [skillInput, setSkillInput] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isParsing, setIsParsing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [hasAiParsed, setHasAiParsed] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+  const { data: profileRes, isLoading: isLoadingProfile } = useGetProfileQuery(
+    user.email || "",
+    { skip: !user.email }
+  );
+  const [parseResume, { isLoading: isParsing }] = useParseResumeMutation();
+  const [saveProfile, { isLoading: isSaving }] = useSaveProfileMutation();
 
   const userMetadata = user.user_metadata || {};
   const avatarUrl = userMetadata.avatar_url || userMetadata.picture || null;
   const displayName = formData.full_name || userMetadata.full_name || userMetadata.name || user.email?.split("@")[0] || "User";
 
-  // Load existing saved profile on mount
+  // Populate form state from cached RTK Query profile response
   useEffect(() => {
-    async function loadProfile() {
-      if (!user.email) return;
-      try {
-        setIsLoadingProfile(true);
-        const res = await authFetch(`${backendUrl}/api/profile?email=${encodeURIComponent(user.email)}`);
-        if (res.ok) {
-          const json = await res.json();
-          if (json.profile) {
-            const p = json.profile;
-            setFormData({
-              full_name: p.full_name || user.user_metadata?.full_name || "",
-              email: p.email || user.email || "",
-              phone: p.phone || "",
-              location: p.location || "",
-              headline: p.headline || "",
-              introduction: p.introduction || "",
-              skills: Array.isArray(p.skills) ? p.skills : [],
-              projects_and_past_experience:
-                Array.isArray(p.projects_and_past_experience) && p.projects_and_past_experience.length > 0
-                  ? p.projects_and_past_experience
-                  : [
-                      {
-                        company_name: "",
-                        designation: "",
-                        role_type: "Full-time",
-                        from: "",
-                        to: "",
-                        is_currently_working: true,
-                        responsibilities_projects: "",
-                        skills: [],
-                      },
-                    ],
-              education_details:
-                Array.isArray(p.education_details) && p.education_details.length > 0
-                  ? p.education_details
-                  : [
-                      {
-                        university_text: "",
-                        degree_or_major_title: "",
-                        education_level_text: "Bachelor's Degree",
-                        graduation_month_year: "",
-                      },
-                    ],
-              portfolio_links: {
-                github: p.portfolio_links?.github || "",
-                linkedin: p.portfolio_links?.linkedin || "",
-                portfolio: p.portfolio_links?.portfolio || "",
-                resume_url: p.portfolio_links?.resume_url || p.resume_url || "",
-              },
-            });
-          }
-        }
-      } catch (err) {
-        console.warn("Could not fetch profile:", err);
-      } finally {
-        setIsLoadingProfile(false);
-      }
-    }
+    const p = profileRes?.profile;
+    if (!p) return;
 
-    loadProfile();
-  }, [backendUrl, user.email, user.user_metadata]);
+    setFormData({
+      full_name: p.full_name || user.user_metadata?.full_name || "",
+      email: p.email || user.email || "",
+      phone: p.phone || "",
+      location: p.location || "",
+      headline: p.headline || "",
+      introduction: p.introduction || "",
+      skills: Array.isArray(p.skills) ? p.skills : [],
+      projects_and_past_experience:
+        Array.isArray(p.projects_and_past_experience) && p.projects_and_past_experience.length > 0
+          ? p.projects_and_past_experience
+          : [
+              {
+                company_name: "",
+                designation: "",
+                role_type: "Full-time",
+                from: "",
+                to: "",
+                is_currently_working: true,
+                responsibilities_projects: "",
+                skills: [],
+              },
+            ],
+      education_details:
+        Array.isArray(p.education_details) && p.education_details.length > 0
+          ? p.education_details
+          : [
+              {
+                university_text: "",
+                degree_or_major_title: "",
+                education_level_text: "Bachelor's Degree",
+                graduation_month_year: "",
+              },
+            ],
+      portfolio_links: {
+        github: p.portfolio_links?.github || "",
+        linkedin: p.portfolio_links?.linkedin || "",
+        portfolio: p.portfolio_links?.portfolio || "",
+        resume_url: p.portfolio_links?.resume_url || p.resume_url || "",
+      },
+    });
+  }, [profileRes, user.email, user.user_metadata]);
 
   // Handle Drag & Drop / File Selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -222,21 +212,13 @@ export function ProfileClient({ user }: ProfileClientProps) {
       return;
     }
 
-    setIsParsing(true);
     const parseToastId = toast.loading("Reading your resume...");
 
     const bodyFormData = new FormData();
     bodyFormData.append("resume", selectedFile);
 
     try {
-      const res = await authFetch(`${backendUrl}/api/profile/parse-resume`, {
-        method: "POST",
-        body: bodyFormData,
-      });
-
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to parse resume.");
-
+      const json = await parseResume(bodyFormData).unwrap();
       const extracted = json.data;
 
       // Update Form Data with AI Extracted Information (without saving yet!)
@@ -271,11 +253,9 @@ export function ProfileClient({ user }: ProfileClientProps) {
         id: parseToastId,
       });
     } catch (err: any) {
-      toast.error(err.message || "Failed to analyze resume via AI.", {
+      toast.error(err?.data?.error || err?.message || "Failed to analyze resume via AI.", {
         id: parseToastId,
       });
-    } finally {
-      setIsParsing(false);
     }
   };
 
@@ -407,21 +387,13 @@ export function ProfileClient({ user }: ProfileClientProps) {
       return;
     }
 
-    setIsSaving(true);
     const saveToastId = toast.loading("Saving profile to database...");
 
     try {
-      const res = await authFetch(`${backendUrl}/api/profile`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          email: user.email,
-        }),
-      });
-
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to save profile.");
+      await saveProfile({
+        ...formData,
+        email: user.email,
+      }).unwrap();
 
       toast.success("Candidate profile saved successfully!", {
         id: saveToastId,
@@ -429,11 +401,9 @@ export function ProfileClient({ user }: ProfileClientProps) {
       setHasAiParsed(false);
       setIsEditing(false); // Switch smoothly back to profile view mode
     } catch (err: any) {
-      toast.error(err.message || "Failed to persist profile.", {
+      toast.error(err?.data?.error || err?.message || "Failed to persist profile.", {
         id: saveToastId,
       });
-    } finally {
-      setIsSaving(false);
     }
   };
 

@@ -6,7 +6,12 @@ import { User as SupabaseUser } from "@supabase/supabase-js";
 import { useAuth } from "@/context/AuthContext";
 import { AppHeader } from "@/components/AppHeader";
 import { JobMetadata, JobMetadataPanel } from "@/components/JobMetadataPanel";
-import { authFetch } from "@/lib/api";
+import {
+  useGetEmailStatsQuery,
+  useGetGmailStatusQuery,
+  useLazyGetGmailConnectUrlQuery,
+  useSyncEmailRepliesMutation,
+} from "@/redux/api/uncoldApi";
 import { toast } from "sonner";
 import {
   Sparkles,
@@ -63,81 +68,64 @@ interface TrackedEmail {
 export function DashboardClient({ user }: DashboardClientProps) {
   const { signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<"overview" | "campaigns" | "contacts" | "activity">("overview");
-  const [emails, setEmails] = useState<TrackedEmail[]>([]);
-  const [isLoadingEmails, setIsLoadingEmails] = useState(true);
-  const [hasLoadedInitial, setHasLoadedInitial] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState<TrackedEmail | null>(null);
-  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
-  const [gmailStatus, setGmailStatus] = useState<{
-    loaded: boolean;
-    connected: boolean;
-    connectedGmail: string | null;
-  }>({ loaded: false, connected: false, connectedGmail: null });
 
   const userMetadata = user.user_metadata || {};
   const fullName = userMetadata.full_name || userMetadata.name || user.email?.split("@")[0] || "User";
   const avatarUrl = userMetadata.avatar_url || userMetadata.picture || null;
   const provider = user.app_metadata?.provider || "email";
 
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+  const {
+    data: emailStatsData,
+    isLoading: isLoadingEmails,
+    fulfilledTimeStamp,
+    refetch: refetchEmailStats,
+  } = useGetEmailStatsQuery(user.email || undefined, {
+    pollingInterval: 15000,
+  });
+  const [syncEmailReplies] = useSyncEmailRepliesMutation();
 
-  // Fetch real-time email telemetry and sync replies
-  const fetchEmails = useCallback(async (isSilent = false) => {
-    try {
-      if (!isSilent) setIsLoadingEmails(true);
+  const {
+    data: gmailData,
+    isLoading: isGmailLoading,
+    isError: isGmailError,
+  } = useGetGmailStatusQuery(user.email || "", {
+    skip: !user.email,
+  });
+  const [triggerGmailConnect] = useLazyGetGmailConnectUrlQuery();
 
-      // Trigger automatic reply check in background
-      if (user.email) {
-        authFetch(`${backendUrl}/api/emails/sync-replies`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: user.email }),
-        }).catch(() => {});
-      }
+  const emails = (emailStatsData?.emails ?? []) as TrackedEmail[];
+  const hasLoadedInitial = !isLoadingEmails;
+  const lastRefreshed = fulfilledTimeStamp ? new Date(fulfilledTimeStamp) : null;
+  const gmailStatus = {
+    loaded: !user.email || !isGmailLoading || isGmailError,
+    connected: Boolean(gmailData?.connected),
+    connectedGmail: gmailData?.connectedGmail || null,
+  };
 
-      const url = user.email
-        ? `${backendUrl}/api/emails/stats?email=${encodeURIComponent(user.email)}`
-        : `${backendUrl}/api/emails/stats`;
-      const res = await authFetch(url);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.emails) {
-          setEmails(data.emails);
-          setLastRefreshed(new Date());
+  // Fetch real-time email stats and sync replies via RTK Query
+  const fetchEmails = useCallback(
+    async (_isSilent = false) => {
+      try {
+        if (user.email) {
+          syncEmailReplies({ email: user.email }).catch(() => {});
         }
+        await refetchEmailStats();
+      } catch (e) {
+        console.warn("Could not fetch email stats:", e);
       }
-    } catch (e) {
-      console.warn("Could not fetch email stats:", e);
-    } finally {
-      setIsLoadingEmails(false);
-      setHasLoadedInitial(true);
+    },
+    [refetchEmailStats, syncEmailReplies, user.email]
+  );
+
+  useEffect(() => {
+    if (user.email) {
+      syncEmailReplies({ email: user.email }).catch(() => {});
     }
-  }, [backendUrl, user.email]);
+  }, [syncEmailReplies, user.email]);
 
+  // Handle OAuth callback query params
   useEffect(() => {
-    fetchEmails(false);
-    // Auto-refresh telemetry every 10 seconds silently to catch opens in real-time
-    const interval = setInterval(() => fetchEmails(true), 10000);
-    return () => clearInterval(interval);
-  }, [fetchEmails]);
-
-  // Check Gmail connection status and handle OAuth callback query params
-  useEffect(() => {
-    if (!user.email) return;
-
-    authFetch(`${backendUrl}/api/gmail/status?email=${encodeURIComponent(user.email)}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setGmailStatus({
-          loaded: true,
-          connected: Boolean(d.connected),
-          connectedGmail: d.connectedGmail || null,
-        });
-      })
-      .catch(() => {
-        setGmailStatus((prev) => ({ ...prev, loaded: true }));
-      });
-
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       if (params.get("gmail_connected") === "1") {
@@ -151,20 +139,19 @@ export function DashboardClient({ user }: DashboardClientProps) {
         window.history.replaceState({}, "", window.location.pathname);
       }
     }
-  }, [backendUrl, user.email]);
+  }, []);
 
   const handleConnectGmail = async () => {
     if (!user.email) return;
     try {
-      const res = await authFetch(`${backendUrl}/api/gmail/connect?returnTo=/dashboard&format=json`);
-      const data = await res.json();
-      if (!res.ok || !data.url) {
-        toast.error(data.error || "Failed to start Gmail connection.");
+      const data = await triggerGmailConnect("/dashboard").unwrap();
+      if (!data?.url) {
+        toast.error(data?.error || "Failed to start Gmail connection.");
         return;
       }
       window.location.href = data.url;
-    } catch {
-      toast.error("Failed to start Gmail connection.");
+    } catch (err: any) {
+      toast.error(err?.data?.error || "Failed to start Gmail connection.");
     }
   };
 

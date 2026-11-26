@@ -5,8 +5,16 @@ import Link from "next/link";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import { useAuth } from "@/context/AuthContext";
 import { AppHeader } from "@/components/AppHeader";
+import { CustomSelect } from "@/components/CustomSelect";
 import { JobMetadata, JobMetadataPanel } from "@/components/JobMetadataPanel";
 import { authFetch } from "@/lib/api";
+import {
+  useGetGmailStatusQuery,
+  useGetProfileQuery,
+  useLazyGetGmailConnectUrlQuery,
+  useLogOutreachCopyMutation,
+  useSendGmailMutation,
+} from "@/redux/api/uncoldApi";
 import { toast } from "sonner";
 import {
   Mail,
@@ -67,8 +75,10 @@ export function MailboxClient({ user }: MailboxClientProps) {
   const [parsedData, setParsedData] = useState<ParsedJdData | null>(null);
   const [jobMetadata, setJobMetadata] = useState<JobMetadata | null>(null);
 
-  // Cached profile from DB (Optimization Step 2: bypass DB roundtrip on generation)
-  const [cachedProfile, setCachedProfile] = useState<any>(null);
+  const { data: profileData } = useGetProfileQuery(user.email || "", {
+    skip: !user.email,
+  });
+  const cachedProfile = profileData?.profile ?? null;
 
   // Email Composer State (editable by user)
   const [recipientEmail, setRecipientEmail] = useState("");
@@ -77,14 +87,25 @@ export function MailboxClient({ user }: MailboxClientProps) {
   const [jobTitle, setJobTitle] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
-  const [isSending, setIsSending] = useState(false);
   const [copied, setCopied] = useState(false);
   const [hasLoggedCopy, setHasLoggedCopy] = useState(false);
-  const [gmailStatus, setGmailStatus] = useState<{
-    loaded: boolean;
-    connected: boolean;
-    connectedGmail: string | null;
-  }>({ loaded: false, connected: false, connectedGmail: null });
+
+  const {
+    data: gmailData,
+    isLoading: isGmailLoading,
+    isError: isGmailError,
+  } = useGetGmailStatusQuery(user.email || "", {
+    skip: !user.email,
+  });
+  const [triggerGmailConnect] = useLazyGetGmailConnectUrlQuery();
+  const [sendGmail, { isLoading: isSending }] = useSendGmailMutation();
+  const [logOutreachCopy] = useLogOutreachCopyMutation();
+
+  const gmailStatus = {
+    loaded: !user.email || !isGmailLoading || isGmailError,
+    connected: Boolean(gmailData?.connected),
+    connectedGmail: gmailData?.connectedGmail || null,
+  };
 
   const userMetadata = user.user_metadata || {};
   const fullName = userMetadata.full_name || userMetadata.name || user.email?.split("@")[0] || "User";
@@ -105,27 +126,20 @@ export function MailboxClient({ user }: MailboxClientProps) {
 
       if (outreachType !== "email" && !hasLoggedCopy && user.email) {
         setHasLoggedCopy(true);
-        authFetch(`${backendUrl}/api/outreach/log-copy`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: user.email,
-            channel: outreachType,
-            companyName: companyName.trim() || undefined,
-            recipientName: recipientName.trim() || undefined,
-            jobTitle: jobTitle.trim() || undefined,
-            jobMetadata: jobMetadata || undefined,
-            body,
-          }),
+        logOutreachCopy({
+          email: user.email,
+          channel: outreachType,
+          companyName: companyName.trim() || undefined,
+          recipientName: recipientName.trim() || undefined,
+          jobTitle: jobTitle.trim() || undefined,
+          jobMetadata: jobMetadata || undefined,
+          body,
         })
-          .then((r) => {
-            if (r.ok) {
-              toast.success(
-                `Copied ${outreachType === "dm" ? "DM" : "Wellfound Note"} & logged to History!`
-              );
-            } else {
-              toast.success("Copied message to clipboard!");
-            }
+          .unwrap()
+          .then(() => {
+            toast.success(
+              `Copied ${outreachType === "dm" ? "DM" : "Wellfound Note"} & logged to History!`
+            );
           })
           .catch(() => {
             toast.success("Copied message to clipboard!");
@@ -169,27 +183,8 @@ export function MailboxClient({ user }: MailboxClientProps) {
     return cleaned.replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
   };
 
-  // Pre-load candidate profile & Gmail connection status once on mount
+  // Handle OAuth callback query params
   useEffect(() => {
-    if (!user.email) return;
-    authFetch(`${backendUrl}/api/profile?email=${encodeURIComponent(user.email)}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d && d.profile) setCachedProfile(d.profile);
-      })
-      .catch((err) => console.warn("Could not pre-cache profile:", err));
-
-    authFetch(`${backendUrl}/api/gmail/status?email=${encodeURIComponent(user.email)}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setGmailStatus({
-          loaded: true,
-          connected: Boolean(d.connected),
-          connectedGmail: d.connectedGmail || null,
-        });
-      })
-      .catch(() => setGmailStatus((prev) => ({ ...prev, loaded: true })));
-
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       if (params.get("gmail_connected") === "1") {
@@ -203,20 +198,19 @@ export function MailboxClient({ user }: MailboxClientProps) {
         window.history.replaceState({}, "", window.location.pathname);
       }
     }
-  }, [backendUrl, user.email]);
+  }, []);
 
   const handleConnectGmail = async () => {
     if (!user.email) return;
     try {
-      const res = await authFetch(`${backendUrl}/api/gmail/connect?returnTo=/mailbox&format=json`);
-      const data = await res.json();
-      if (!res.ok || !data.url) {
-        toast.error(data.error || "Failed to start Gmail connection.");
+      const data = await triggerGmailConnect("/mailbox").unwrap();
+      if (!data?.url) {
+        toast.error(data?.error || "Failed to start Gmail connection.");
         return;
       }
       window.location.href = data.url;
-    } catch {
-      toast.error("Failed to start Gmail connection.");
+    } catch (err: any) {
+      toast.error(err?.data?.error || "Failed to start Gmail connection.");
     }
   };
 
@@ -372,34 +366,24 @@ export function MailboxClient({ user }: MailboxClientProps) {
       return;
     }
 
-    setIsSending(true);
     const sendToastId = toast.loading("Dispatching email via Gmail API...");
 
     try {
-      const res = await authFetch(`${backendUrl}/api/gmail/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: user.email,
-          to: recipientEmail,
-          subject,
-          body,
-          senderName: fullName,
-          companyName: companyName.trim() || undefined,
-          recipientName: recipientName.trim() || undefined,
-          jobTitle: jobTitle.trim() || undefined,
-          jobMetadata: jobMetadata || undefined,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to send email.");
+      await sendGmail({
+        email: user.email,
+        to: recipientEmail,
+        subject,
+        body,
+        senderName: fullName,
+        companyName: companyName.trim() || undefined,
+        recipientName: recipientName.trim() || undefined,
+        jobTitle: jobTitle.trim() || undefined,
+        jobMetadata: jobMetadata || undefined,
+      }).unwrap();
 
       toast.success(`Outreach dispatched from your Gmail!`, { id: sendToastId });
     } catch (err: any) {
-      toast.error(err.message || "Failed to dispatch email.", { id: sendToastId });
-    } finally {
-      setIsSending(false);
+      toast.error(err?.data?.error || err?.message || "Failed to dispatch email.", { id: sendToastId });
     }
   };
 
@@ -495,16 +479,20 @@ export function MailboxClient({ user }: MailboxClientProps) {
                   </div>
                 </div>
 
-                <select
+                <CustomSelect
+                  ariaLabel="Select outreach tone"
+                  size="sm"
+                  align="right"
+                  icon={<Sparkles size={11} className="text-amber-400" />}
                   value={selectedTone}
-                  onChange={(e) => setSelectedTone(e.target.value)}
-                  className="bg-white/[0.04] border border-white/10 text-zinc-300 text-[11px] rounded-lg px-2.5 py-1 focus:outline-none focus:border-white/30 cursor-pointer"
-                >
-                  <option value="confident" className="bg-[#0c0d12]">Tone: Confident</option>
-                  <option value="direct & punchy" className="bg-[#0c0d12]">Tone: Direct & Punchy</option>
-                  <option value="value-first" className="bg-[#0c0d12]">Tone: Value-First</option>
-                  <option value="enthusiastic" className="bg-[#0c0d12]">Tone: Enthusiastic</option>
-                </select>
+                  onChange={setSelectedTone}
+                  options={[
+                    { value: "confident", label: "Tone: Confident", description: "Clear, assured & direct" },
+                    { value: "direct & punchy", label: "Tone: Direct & Punchy", description: "Short, high-signal" },
+                    { value: "value-first", label: "Tone: Value-First", description: "Leads with impact" },
+                    { value: "enthusiastic", label: "Tone: Enthusiastic", description: "Warm & energetic" },
+                  ]}
+                />
               </div>
 
               <textarea
