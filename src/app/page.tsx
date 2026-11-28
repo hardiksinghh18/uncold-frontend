@@ -123,10 +123,7 @@ export default function Home() {
               }}
             />
             <span style={{ fontWeight: 550, fontSize: "0.95rem", letterSpacing: "-0.02em" }}>
-              Uncold
-            </span>
-            <span className="rf-badge" style={{ marginLeft: "0.25rem", fontSize: "0.7rem", padding: "0.15rem 0.5rem" }}>
-              v1.0 Preview
+              UnCold
             </span>
           </Link>
 
