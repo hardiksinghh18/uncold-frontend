@@ -223,6 +223,14 @@ export function MailboxClient({ user }: MailboxClientProps) {
 
     setIsGenerating(true);
     setHasLoggedCopy(false);
+    setCopied(false);
+    setParsedData(null);
+    setJobMetadata(null);
+    setRecipientEmail("");
+    setRecipientName("");
+    setCompanyName("");
+    setJobTitle("");
+    setSubject("");
     setBody(""); // Clear composer so user sees typewriter stream
     const toastId = toast.loading("Connecting to live AI stream...");
 
@@ -270,25 +278,13 @@ export function MailboxClient({ user }: MailboxClientProps) {
             const data = JSON.parse(trimmed.slice(5).trim());
 
             if (data.type === "meta") {
-              if (data.recipientEmail) {
-                foundEmail = data.recipientEmail;
-                setRecipientEmail(data.recipientEmail);
-              }
-              if (data.subject) {
-                setSubject(data.subject);
-              }
-              if (data.companyName) {
-                setCompanyName(data.companyName);
-              }
-              if (data.jobTitle) {
-                setJobTitle(data.jobTitle);
-              }
-              if (data.recipientName) {
-                setRecipientName(data.recipientName);
-              }
-              if (data.jobMetadata) {
-                setJobMetadata(data.jobMetadata);
-              }
+              foundEmail = data.recipientEmail || "";
+              setRecipientEmail(foundEmail);
+              setSubject(data.subject || "");
+              setCompanyName(data.companyName || "");
+              setJobTitle(data.jobTitle || "");
+              setRecipientName(data.recipientName || "");
+              setJobMetadata(data.jobMetadata || null);
               toast.loading("Writing your message...", { id: toastId });
             } else if (data.type === "chunk" && data.text) {
               accumulatedBody += data.text;
@@ -296,6 +292,21 @@ export function MailboxClient({ user }: MailboxClientProps) {
             } else if (data.type === "done") {
               const cleaned = cleanBracketedPlaceholders(accumulatedBody, cachedProfile);
               setBody(cleaned);
+              const teamMatch = cleaned.match(/^(?:Hi|Hello|Hey)\s+([A-Za-z0-9.&-]+(?:\s+[A-Za-z0-9.&-]+){0,2})\s+team\b/i);
+              if (teamMatch?.[1]) {
+                const bodyCompany = teamMatch[1].trim();
+                setCompanyName((prev) => prev || bodyCompany);
+                setJobMetadata((prev) =>
+                  prev
+                    ? { ...prev, companyName: prev.companyName || bodyCompany }
+                    : { companyName: bodyCompany }
+                );
+                setSubject((prev) =>
+                  prev && !prev.toLowerCase().includes(bodyCompany.toLowerCase()) && prev.includes("— Application")
+                    ? prev.replace("— Application", `for ${bodyCompany}`)
+                    : prev
+                );
+              }
               toast.success(
                 foundEmail
                   ? `Message ready! Recruiter email (${foundEmail}) found.`
@@ -339,9 +350,9 @@ export function MailboxClient({ user }: MailboxClientProps) {
         }
         const emailFound = data.extractedInfo?.recipientEmail?.trim() || "";
         setRecipientEmail(emailFound);
-        if (data.extractedInfo?.companyName) setCompanyName(data.extractedInfo.companyName);
-        if (data.extractedInfo?.recipientName) setRecipientName(data.extractedInfo.recipientName);
-        if (data.extractedInfo?.jobTitle) setJobTitle(data.extractedInfo.jobTitle);
+        setCompanyName(data.extractedInfo?.companyName || "");
+        setRecipientName(data.extractedInfo?.recipientName || "");
+        setJobTitle(data.extractedInfo?.jobTitle || "");
         setSubject(data.coldEmail?.subject || data.subject || "Regarding opportunity at your company");
         const rawBody = data.coldEmail?.body || data.body || "";
         setBody(cleanBracketedPlaceholders(rawBody, cachedProfile));

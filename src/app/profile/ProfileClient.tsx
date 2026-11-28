@@ -420,10 +420,30 @@ export function ProfileClient({ user }: ProfileClientProps) {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8">
-        {/* =========================================================================
-            MODE 1: READ-ONLY PROFILE VIEW (Default when !isEditing)
-           ========================================================================= */}
-        {!isEditing ? (
+        {isLoadingProfile && !isEditing ? (
+          <div className="space-y-6 animate-pulse">
+            <div className="p-6 sm:p-8 rounded-2xl bg-[#0c0d12] border border-white/[0.08] space-y-5">
+              <div className="flex items-start gap-4">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/[0.06] shrink-0" />
+                <div className="flex-1 space-y-2.5">
+                  <div className="h-5 w-48 rounded-lg bg-white/[0.08]" />
+                  <div className="h-4 w-72 rounded-lg bg-white/[0.05]" />
+                  <div className="flex gap-2 pt-1">
+                    <div className="h-6 w-28 rounded-lg bg-white/[0.05]" />
+                    <div className="h-6 w-20 rounded-lg bg-white/[0.05]" />
+                    <div className="h-6 w-24 rounded-lg bg-white/[0.05]" />
+                  </div>
+                </div>
+              </div>
+              <div className="h-16 rounded-xl bg-white/[0.03]" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="h-44 rounded-2xl bg-[#0c0d12] border border-white/[0.08]" />
+              <div className="h-44 rounded-2xl bg-[#0c0d12] border border-white/[0.08]" />
+            </div>
+            <div className="h-52 rounded-2xl bg-[#0c0d12] border border-white/[0.08]" />
+          </div>
+        ) : !isEditing ? (
           <div className="space-y-6">
             {/* Top Candidate Hero Card */}
             <div className="p-6 sm:p-8 rounded-2xl bg-[#0c0d12] border border-white/[0.08] relative shadow-xl overflow-hidden">
@@ -663,9 +683,21 @@ export function ProfileClient({ user }: ProfileClientProps) {
                         </div>
 
                         {exp.responsibilities_projects && (
-                          <p className="text-xs text-zinc-300 leading-relaxed whitespace-pre-line pt-1">
-                            {exp.responsibilities_projects}
-                          </p>
+                          <ul className="space-y-1.5 pt-1">
+                            {exp.responsibilities_projects
+                              .split(/\r?\n+/)
+                              .map((line) => line.replace(/^[•\-*\s]+/, "").trim())
+                              .filter(Boolean)
+                              .map((point, pIdx) => (
+                                <li
+                                  key={pIdx}
+                                  className="text-xs text-zinc-300 leading-relaxed flex items-start gap-2"
+                                >
+                                  <span className="text-sky-400 mt-0.5 shrink-0">•</span>
+                                  <span>{point}</span>
+                                </li>
+                              ))}
+                          </ul>
                         )}
                       </div>
                     ))}

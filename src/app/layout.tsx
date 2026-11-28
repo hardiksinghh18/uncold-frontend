@@ -50,21 +50,24 @@ export default function RootLayout({
           <AuthProvider>
             {children}
             <Toaster
-            theme="dark"
-            position="bottom-left"
-            richColors
-            closeButton
-            toastOptions={{
-              style: {
-                background: "#0c0d12",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                color: "#f4f4f5",
-                fontSize: "12px",
-                borderRadius: "14px",
-                boxShadow: "0 16px 40px -12px rgba(0, 0, 0, 0.75)",
-              },
-            }}
-          />
+              theme="dark"
+              position="bottom-left"
+              closeButton
+              toastOptions={{
+                className: "uncold-glass-toast",
+                style: {
+                  background: "rgba(14, 16, 23, 0.65)",
+                  backdropFilter: "blur(22px) saturate(180%)",
+                  WebkitBackdropFilter: "blur(22px) saturate(180%)",
+                  border: "1px solid rgba(255, 255, 255, 0.16)",
+                  color: "#f4f4f5",
+                  fontSize: "12px",
+                  borderRadius: "16px",
+                  boxShadow:
+                    "inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 20px 48px -12px rgba(0, 0, 0, 0.85)",
+                },
+              }}
+            />
           </AuthProvider>
         </ReduxProvider>
       </body>
